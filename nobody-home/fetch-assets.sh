@@ -35,9 +35,9 @@ done
   "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/cobblestone_street_night_2k.hdr" \
   -o assets/hdri/night.hdr
 
-# Car model (three.js examples)
+# Car model (Khronos glTF-Sample-Assets ToyCar, CC0, uncompressed/no-Draco)
 [ -f assets/models/car.glb ] || curl -sSL --fail -m 120 \
-  "https://threejs.org/examples/models/gltf/ferrari.glb" -o assets/models/car.glb
+  "https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb" -o assets/models/car.glb
 
 # --- vendored three.js (offline) ---
 V=vendor; BASE="https://cdn.jsdelivr.net/npm/three@0.160.0"

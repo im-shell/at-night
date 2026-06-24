@@ -314,9 +314,13 @@ streetlamp(0,27,true); streetlamp(0,-44,false);
 function car(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
   if(ASSETS.car){
     const m=ASSETS.car.clone(true);
-    m.scale.setScalar(0.5);
+    // ToyCar ships with a presentation cloth ("Fabric") + camera nodes — strip them
+    const rm=[]; m.traverse(o=>{ if(o.name==='Fabric'||o.type==='Camera'||/Camera/.test(o.name||'')) rm.push(o); });
+    rm.forEach(o=>o.parent&&o.parent.remove(o));
+    m.scale.setScalar(110); // model is ~0.04u long → ~4.2u street car
     m.traverse(o=>{ if(o.isMesh){ o.castShadow=true;
-      if(o.material){ o.material=o.material.clone(); o.material.color&&o.material.color.multiplyScalar(0.35); o.material.metalness=0.3; o.material.roughness=0.6; } }});
+      if(o.material){ o.material=o.material.clone(); o.material.color&&o.material.color.multiplyScalar(0.4); o.material.metalness=0.3; o.material.roughness=0.6; } }});
+    const bb=new THREE.Box3().setFromObject(m); m.position.y=-bb.min.y; // sit wheels on ground
     g.add(m);
   } else {
     const b=new THREE.Mesh(new THREE.BoxGeometry(2,0.9,4.4),new THREE.MeshStandardMaterial({color:0x191b22,roughness:0.6,metalness:0.3})); b.position.y=0.7; b.castShadow=true; g.add(b);
