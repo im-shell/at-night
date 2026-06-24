@@ -325,7 +325,10 @@ function car(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
     rm.forEach(o=>o.parent&&o.parent.remove(o));
     m.scale.setScalar(110); // model is ~0.04u long → ~4.2u street car
     m.traverse(o=>{ if(o.isMesh){ o.castShadow=true;
-      if(o.material){ o.material=o.material.clone(); o.material.color&&o.material.color.multiplyScalar(0.4); o.material.metalness=0.3; o.material.roughness=0.6; } }});
+      if(o.material){ o.material=o.material.clone(); o.material.color&&o.material.color.multiplyScalar(0.4); o.material.metalness=0.3; o.material.roughness=0.6;
+        // ToyCar uses transmission (Glass) + clearcoat (body): each is a per-frame full-scene pass — kill for mobile fill-rate
+        if(o.material.transmission!==undefined){ o.material.transmission=0; o.material.transparent=false; }
+        if(o.material.clearcoat!==undefined){ o.material.clearcoat=0; } } }});
     const bb=new THREE.Box3().setFromObject(m); m.position.y=-bb.min.y; // sit wheels on ground
     g.add(m);
   } else {
