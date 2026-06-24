@@ -312,8 +312,16 @@ streetlamp(0,27,true); streetlamp(0,-44,false);
 
 /* your car at the dead end */
 function car(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
-  const b=new THREE.Mesh(new THREE.BoxGeometry(2,0.9,4.4),new THREE.MeshStandardMaterial({color:0x191b22,roughness:0.6,metalness:0.3})); b.position.y=0.7; b.castShadow=true; g.add(b);
-  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.8,2.2),new THREE.MeshStandardMaterial({color:0x0d0f14,roughness:0.3,metalness:0.4})); cab.position.set(0,1.45,-0.2); g.add(cab);
+  if(ASSETS.car){
+    const m=ASSETS.car.clone(true);
+    m.scale.setScalar(0.5);
+    m.traverse(o=>{ if(o.isMesh){ o.castShadow=true;
+      if(o.material){ o.material=o.material.clone(); o.material.color&&o.material.color.multiplyScalar(0.35); o.material.metalness=0.3; o.material.roughness=0.6; } }});
+    g.add(m);
+  } else {
+    const b=new THREE.Mesh(new THREE.BoxGeometry(2,0.9,4.4),new THREE.MeshStandardMaterial({color:0x191b22,roughness:0.6,metalness:0.3})); b.position.y=0.7; b.castShadow=true; g.add(b);
+    const cab=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.8,2.2),new THREE.MeshStandardMaterial({color:0x0d0f14,roughness:0.3,metalness:0.4})); cab.position.set(0,1.45,-0.2); g.add(cab);
+  }
   scene.add(g); addRect(x,z,2.2,4.6); }
 car(4.5,27);
 /* a few parked cars + a swing for liminal dread */
