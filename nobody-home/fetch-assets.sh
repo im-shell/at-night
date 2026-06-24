@@ -41,10 +41,11 @@ done
 
 # --- vendored three.js (offline) ---
 V=vendor; BASE="https://cdn.jsdelivr.net/npm/three@0.160.0"
-mkdir -p "$V/addons/controls" "$V/addons/loaders"
+mkdir -p "$V/addons/controls" "$V/addons/loaders" "$V/addons/utils"
 [ -f "$V/three.module.js" ] || curl -sSL --fail -m 120 "$BASE/build/three.module.js" -o "$V/three.module.js"
 [ -f "$V/addons/controls/PointerLockControls.js" ] || curl -sSL --fail -m 120 "$BASE/examples/jsm/controls/PointerLockControls.js" -o "$V/addons/controls/PointerLockControls.js"
 [ -f "$V/addons/loaders/GLTFLoader.js" ] || curl -sSL --fail -m 120 "$BASE/examples/jsm/loaders/GLTFLoader.js" -o "$V/addons/loaders/GLTFLoader.js"
 [ -f "$V/addons/loaders/RGBELoader.js" ] || curl -sSL --fail -m 120 "$BASE/examples/jsm/loaders/RGBELoader.js" -o "$V/addons/loaders/RGBELoader.js"
+[ -f "$V/addons/utils/BufferGeometryUtils.js" ] || curl -sSL --fail -m 120 "$BASE/examples/jsm/utils/BufferGeometryUtils.js" -o "$V/addons/utils/BufferGeometryUtils.js"
 
 echo "DONE"
