@@ -198,6 +198,7 @@ async function loadEnv(url){
   try{
     const hdr=await new RGBELoader().loadAsync(url);
     const pmrem=new THREE.PMREMGenerator(renderer);
+    if(scene.environment) scene.environment.dispose();
     scene.environment=pmrem.fromEquirectangular(hdr).texture;
     hdr.dispose(); pmrem.dispose();
   }catch(e){ console.warn("env fallback", e); }
@@ -206,17 +207,22 @@ const ASSETS={};
 async function loadAllAssets(){
   const loadingEl=document.getElementById("loading");
   loadingEl.textContent="loading textures…";
-  ASSETS.asphalt  = await loadPBR("asphalt",  {repeat:[40,40]}, null);
-  ASSETS.ground   = await loadPBR("ground",   {repeat:[30,30]}, null);
-  ASSETS.siding   = await loadPBR("siding",   {repeat:[2,2]},   null);
-  ASSETS.brick    = await loadPBR("brick",    {repeat:[2,2]},   null);
-  ASSETS.roof     = await loadPBR("roof",     {repeat:[3,2]},   null);
-  ASSETS.wood     = await loadPBR("wood",     {repeat:[1,4]},   null);
-  ASSETS.concrete = await loadPBR("concrete", {repeat:[2,2]},   null);
-  loadingEl.textContent="loading lighting…";
-  await loadEnv("assets/hdri/night.hdr");
-  loadingEl.textContent="loading props…";
-  ASSETS.car = await loadGLTF("assets/models/car.glb");
+  // load all PBR sets in parallel (each loadPBR already parallelises its 4 maps)
+  const [asphalt,ground,siding,brick,roof,wood,concrete] = await Promise.all([
+    loadPBR("asphalt",  {repeat:[40,40]}, null),
+    loadPBR("ground",   {repeat:[30,30]}, null),
+    loadPBR("siding",   {repeat:[2,2]},   null),
+    loadPBR("brick",    {repeat:[2,2]},   null),
+    loadPBR("roof",     {repeat:[3,2]},   null),
+    loadPBR("wood",     {repeat:[1,4]},   null),
+    loadPBR("concrete", {repeat:[2,2]},   null),
+  ]);
+  Object.assign(ASSETS,{asphalt,ground,siding,brick,roof,wood,concrete});
+  loadingEl.textContent="loading lighting & props…";
+  await Promise.all([
+    loadEnv("assets/hdri/night.hdr"),
+    loadGLTF("assets/models/car.glb").then(c=>{ ASSETS.car=c; }),
+  ]);
 }
 await loadAllAssets();
 
