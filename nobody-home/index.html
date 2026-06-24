@@ -251,6 +251,7 @@ ground.geometry.setAttribute('uv2', ground.geometry.attributes.uv); // aoMap nee
 const wallMat = ASSETS.siding || new THREE.MeshStandardMaterial({color:0x14161d,roughness:0.9,metalness:0.0});
 const wallMatB = ASSETS.brick || wallMat;
 const roofMat = ASSETS.roof  || new THREE.MeshStandardMaterial({color:0x0d0f15,roughness:1.0});
+const concreteMat = ASSETS.concrete || new THREE.MeshStandardMaterial({color:0x161a22,roughness:1});
 const winLit=new THREE.MeshBasicMaterial({color:0xffcf7a,fog:true});
 const winDark=new THREE.MeshBasicMaterial({color:0x10131a,fog:true});
 
@@ -277,7 +278,7 @@ const rowZ=[22,12,2,-8,-18,-30,-40];
 for(const z of rowZ){ makeHouse(-13,z,Math.PI/2); makeHouse(13,z,-Math.PI/2); }
 
 /* perimeter fence (thin boxes) + gate gap */
-const fenceMat=new THREE.MeshStandardMaterial({color:0x10131a,roughness:1});
+const fenceMat = ASSETS.wood || new THREE.MeshStandardMaterial({color:0x10131a,roughness:1});
 const gateX=(Math.random()*18-9);
 function fenceRun(x1,z1,x2,z2,gapAt){ const len=Math.hypot(x2-x1,z2-z1); const seg=2.4; const n=Math.floor(len/seg); for(let i=0;i<n;i++){ const t=(i+0.5)/n; const px=x1+(x2-x1)*t, pz=z1+(z2-z1)*t; if(gapAt!=null && Math.abs(px-gapAt)<3.5 && Math.abs(pz-(-47))<2) continue; const post=new THREE.Mesh(new THREE.BoxGeometry(0.18,2.2,seg*0.96),fenceMat); post.position.set(px,1.1,pz); post.lookAt(x2,1.1,z2); post.castShadow=true; scene.add(post); } }
 fenceRun(BOUND.minx,BOUND.minz,BOUND.maxx,BOUND.minz,gateX); // far (gate)
@@ -294,13 +295,13 @@ const gateLight=new THREE.PointLight(0xff3030,0,8,2); gateLight.position.set(0,3
 /* landmarks (tall, faintly self-lit, visible through fog) */
 function watertower(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
   for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,12),fenceMat); leg.position.set(Math.cos(a)*1.6,6,Math.sin(a)*1.6); g.add(leg); }
-  const tank=new THREE.Mesh(new THREE.CylinderGeometry(3,3,4,12),new THREE.MeshStandardMaterial({color:0x161a22,roughness:1})); tank.position.y=14; tank.castShadow=true; g.add(tank);
+  const tank=new THREE.Mesh(new THREE.CylinderGeometry(3,3,4,12),concreteMat); tank.geometry.setAttribute('uv2', tank.geometry.attributes.uv); tank.position.y=14; tank.castShadow=true; g.add(tank);
   const top=new THREE.Mesh(new THREE.ConeGeometry(3.1,2,12),roofMat); top.position.y=17; g.add(top);
   const beacon=new THREE.Mesh(new THREE.SphereGeometry(0.16),new THREE.MeshBasicMaterial({color:0xff5544})); beacon.position.y=18.2; g.add(beacon);
   scene.add(g); addRect(x,z,3,3); }
 function spire(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
-  const body=new THREE.Mesh(new THREE.BoxGeometry(5,8,5),wallMat); body.position.y=4; body.castShadow=true; g.add(body);
-  const tower=new THREE.Mesh(new THREE.BoxGeometry(2.4,7,2.4),wallMat); tower.position.y=9; g.add(tower);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(5,8,5),concreteMat); body.geometry.setAttribute('uv2', body.geometry.attributes.uv); body.position.y=4; body.castShadow=true; g.add(body);
+  const tower=new THREE.Mesh(new THREE.BoxGeometry(2.4,7,2.4),concreteMat); tower.geometry.setAttribute('uv2', tower.geometry.attributes.uv); tower.position.y=9; g.add(tower);
   const sp=new THREE.Mesh(new THREE.ConeGeometry(1.7,6,4),roofMat); sp.position.y=15; sp.rotation.y=Math.PI/4; g.add(sp);
   const cross=new THREE.Mesh(new THREE.BoxGeometry(0.15,1.2,0.15),new THREE.MeshBasicMaterial({color:0x6a7080})); cross.position.y=18.4; g.add(cross);
   scene.add(g); addRect(x,z,5,5); }
