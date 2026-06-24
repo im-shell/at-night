@@ -239,14 +239,13 @@ const houseRects=[]; // {minx,maxx,minz,maxz}
 const colliders=[];  // same, for player/entity
 function addRect(cx,cz,w,d){ const r={minx:cx-w/2,maxx:cx+w/2,minz:cz-d/2,maxz:cz+d/2}; houseRects.push(r); colliders.push(r); return r; }
 
-/* ground (wet asphalt) */
-const groundMat=new THREE.MeshStandardMaterial({color:0x0c0f15,roughness:0.45,metalness:0.35});
+/* ground (wet asphalt, real PBR; reflections come from env map) */
+const groundMat = ASSETS.asphalt || new THREE.MeshStandardMaterial({color:0x0c0f15,roughness:0.7,metalness:0.0});
+groundMat.roughness = 0.55; // slight wet sheen via env reflection, not a mirror
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,180),groundMat);
 ground.rotation.x=-Math.PI/2; ground.position.y=0; ground.receiveShadow=true; scene.add(ground);
-/* shallow flood sheen — a second faint reflective-ish plane */
-const waterMat=new THREE.MeshStandardMaterial({color:0x0b1018,roughness:0.12,metalness:0.7,transparent:true,opacity:0.5});
-const water=new THREE.Mesh(new THREE.PlaneGeometry(180,180),waterMat);
-water.rotation.x=-Math.PI/2; water.position.y=0.02; scene.add(water);
+ground.geometry.setAttribute('uv2', ground.geometry.attributes.uv); // aoMap needs uv2
+/* (flood-sheen mirror plane removed — it caused the unreadable shiny floor) */
 
 /* materials */
 const wallMat=new THREE.MeshStandardMaterial({color:0x14161d,roughness:0.9,metalness:0.0});
