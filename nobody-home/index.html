@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>NOBODY HOME</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;}
+  html,body{height:100%;overflow:hidden;background:#05060a;font-family:'Rajdhani',sans-serif;color:#cdd2dc;cursor:default;}
+  #stage{position:fixed;inset:0;}
+  canvas{display:block;filter:saturate(.82) contrast(1.06) brightness(1);}
+  /* post overlays */
+  .vig{position:fixed;inset:0;pointer-events:none;z-index:5;background:radial-gradient(ellipse at center, transparent 38%, rgba(0,0,0,.62) 100%);box-shadow:inset 0 0 220px 70px rgba(0,0,0,.92);}
+  .grain{position:fixed;inset:-50%;pointer-events:none;z-index:6;opacity:.06;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    animation:grain .45s steps(3) infinite;}
+  @keyframes grain{0%{transform:translate(0,0)}33%{transform:translate(-3%,2%)}66%{transform:translate(2%,-3%)}100%{transform:translate(-2%,-1%)}}
+  .flash{position:fixed;inset:0;pointer-events:none;z-index:7;background:#22000a;opacity:0;transition:opacity .08s;}
+  .dark{position:fixed;inset:0;pointer-events:none;z-index:4;background:#000;opacity:0;}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:8;opacity:0;transition:opacity .6s;}
+  #hud.on{opacity:1;}
+  .reticle{position:absolute;left:50%;top:50%;width:5px;height:5px;border-radius:50%;background:rgba(200,210,225,.35);transform:translate(-50%,-50%);}
+  .obj{position:absolute;left:0;right:0;bottom:34px;text-align:center;font-family:'Special Elite';font-size:15px;letter-spacing:1px;color:rgba(190,200,215,.55);text-shadow:0 2px 12px #000;}
+  .fuses{position:absolute;left:18px;bottom:20px;font-family:'Special Elite';font-size:14px;letter-spacing:2px;color:rgba(255,210,120,.7);text-shadow:0 0 14px rgba(255,180,60,.4);}
+  .stamina{position:absolute;left:18px;bottom:44px;width:120px;height:4px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;opacity:0;transition:opacity .3s;}
+  .stamina i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#5a7,#8fd);transform-origin:left;}
+  .toast{position:absolute;left:0;right:0;top:42%;text-align:center;font-family:'Special Elite';font-size:clamp(22px,5vw,40px);color:#e8d9c0;text-shadow:0 0 30px #000,0 0 14px rgba(255,60,60,.4);opacity:0;transition:opacity .5s;letter-spacing:2px;}
+  .toast.show{opacity:1;}
+  .hint{position:absolute;left:0;right:0;top:54%;text-align:center;font-size:15px;color:rgba(180,190,205,.5);letter-spacing:1px;opacity:0;transition:opacity .5s;}
+  .hint.show{opacity:.9;}
+
+  /* screens */
+  .screen{position:fixed;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:26px;
+    background:radial-gradient(ellipse at 50% 36%,rgba(20,16,30,.5),rgba(3,4,8,.96) 75%);transition:opacity .5s;}
+  .screen.hide{opacity:0;pointer-events:none;}
+  .title{font-family:'Special Elite';font-size:clamp(48px,13vw,104px);letter-spacing:6px;color:#d7cdbb;text-shadow:0 0 40px rgba(0,0,0,.9),0 0 18px rgba(120,40,40,.25);line-height:.95;}
+  .sub{font-family:'Special Elite';font-size:14px;letter-spacing:4px;color:#7c8499;margin-top:14px;text-transform:uppercase;}
+  .ctrls{margin-top:30px;color:#828b9e;font-size:14px;line-height:2;letter-spacing:.5px;max-width:430px;}
+  .ctrls b{color:#b9c2d4;font-weight:700;}
+  .k{display:inline-block;border:1px solid #2f3850;border-radius:5px;padding:1px 7px;font-size:12px;color:#cfd6e6;font-family:'Rajdhani';font-weight:700;margin:0 1px;}
+  .enter{font-family:'Special Elite';font-size:20px;letter-spacing:3px;color:#0a0a0c;background:linear-gradient(180deg,#cdbfa6,#a89a82);border:none;padding:15px 44px;border-radius:3px;margin-top:34px;cursor:pointer;box-shadow:0 0 40px rgba(180,150,110,.25);transition:transform .15s,box-shadow .2s;animation:bpulse 3s infinite;}
+  .enter:hover{transform:scale(1.04);box-shadow:0 0 60px rgba(200,170,130,.5);}
+  @keyframes bpulse{50%{box-shadow:0 0 60px rgba(180,150,110,.5)}}
+  .phones{margin-top:18px;font-size:12px;letter-spacing:2px;color:#5f6678;}
+  .qtoggle{margin-top:14px;font-size:13px;color:#8089a0;cursor:pointer;pointer-events:auto;}
+  .qtoggle span{color:#cdb;border-bottom:1px dashed #556;}
+  .stat{display:flex;gap:16px;margin-top:24px;}
+  .stat .b{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:10px;padding:14px 22px;}
+  .stat .b .n{font-family:'Special Elite';font-size:26px;color:#e2d6c0;}
+  .stat .b .l{font-size:11px;letter-spacing:2px;color:#7d8598;margin-top:5px;text-transform:uppercase;}
+  .row{display:flex;gap:12px;margin-top:26px;}
+  .btn{font-family:'Special Elite';font-size:15px;letter-spacing:1px;padding:13px 26px;border-radius:3px;cursor:pointer;border:none;}
+  .btn.p{background:linear-gradient(180deg,#cdbfa6,#a89a82);color:#0a0a0c;}
+  .btn.g{background:transparent;border:1px solid #39435c;color:#aeb6c8;}
+  .copied{height:16px;margin-top:8px;color:#bda;font-size:12px;letter-spacing:1px;}
+  #err{position:fixed;left:0;right:0;bottom:0;z-index:50;background:#300;color:#fbb;font-family:monospace;font-size:12px;padding:8px;display:none;white-space:pre-wrap;max-height:40%;overflow:auto;}
+  #loading{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;color:#566;font-family:'Special Elite';letter-spacing:3px;}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+<div class="dark" id="dark"></div>
+<div class="vig"></div>
+<div class="grain" id="grain"></div>
+<div class="flash" id="flash"></div>
+<div id="loading">entering the fog…</div>
+
+<div id="hud">
+  <div class="reticle"></div>
+  <div class="stamina" id="stam"><i id="stambar"></i></div>
+  <div class="fuses" id="fuses">FUSES&nbsp; — &nbsp;0 / 3</div>
+  <div class="obj" id="obj">find a way out of the street</div>
+  <div class="toast" id="toast"></div>
+  <div class="hint" id="hint"></div>
+</div>
+
+<div class="screen" id="title">
+  <div class="title">NOBODY&nbsp;HOME</div>
+  <div class="sub">you don't remember driving here</div>
+  <div class="ctrls">
+    <b>WASD</b> / <span class="k">↑↓←→</span> move &nbsp;·&nbsp; <b>mouse</b> look<br>
+    <span class="k">Shift</span> sprint &nbsp;·&nbsp; <span class="k">C</span> crouch (quieter) &nbsp;·&nbsp; <span class="k">F</span> flashlight<br>
+    find <b style="color:#e8c073">3 fuses</b> · power the <b>gate</b> · get out.<br>
+    she won't kill you — she'll <b style="color:#d98">shake you loose</b>. then <b>run.</b>
+  </div>
+  <button class="enter" id="enter">▶ STEP OUTSIDE</button>
+  <div class="phones">🎧 headphones strongly recommended · she's mostly a sound</div>
+  <div class="qtoggle" id="qtoggle">quality: <span id="qlabel">HIGH</span></div>
+</div>
+
+<div class="screen hide" id="win">
+  <div class="title" style="font-size:clamp(38px,9vw,72px)">YOU GOT OUT</div>
+  <div class="sub" id="winsub">the fog let you go</div>
+  <div class="stat">
+    <div class="b"><div class="n" id="wtime">0:00</div><div class="l">Time</div></div>
+    <div class="b"><div class="n" id="wbest">0:00</div><div class="l">Best</div></div>
+    <div class="b"><div class="n" id="wruns">1</div><div class="l">Nights</div></div>
+  </div>
+  <div class="row">
+    <button class="btn p" id="again">▶ AGAIN</button>
+    <button class="btn g" id="wshare">SHARE</button>
+  </div>
+  <div class="copied" id="copied"></div>
+</div>
+
+<div class="screen hide" id="pause">
+  <div class="title" style="font-size:clamp(30px,7vw,52px)">PAUSED</div>
+  <div class="sub">the street waits</div>
+  <button class="enter" id="resume">▶ RESUME</button>
+</div>
+
+<div id="err"></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three.module.js",
+  "three/addons/": "./vendor/addons/"
+}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+const errEl=document.getElementById("err");
+window.addEventListener("error",e=>{ errEl.style.display="block"; errEl.textContent+="\n"+(e.message||e.error)+" @ "+(e.filename||"")+":"+(e.lineno||""); });
+try{
+
+/* ---------------- setup ---------------- */
+const stage=document.getElementById("stage");
+let W=innerWidth,H=innerHeight;
+let QUALITY=localStorage.getItem("nh_q")||"HIGH";
+const fogColor=new THREE.Color(0x0a0c12);
+const renderer=new THREE.WebGLRenderer({antialias:QUALITY==="HIGH",powerPreference:"high-performance"});
+renderer.setPixelRatio(Math.min(devicePixelRatio, QUALITY==="HIGH"?2:1));
+renderer.setSize(W,H);
+renderer.setClearColor(fogColor,1);
+renderer.useLegacyLights=true; // intuitive intensity scale (1≈full); predictable dark scene
+renderer.shadowMap.enabled = QUALITY==="HIGH";
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+const canvas=renderer.domElement;
+
+const scene=new THREE.Scene();
+scene.background=fogColor;
+scene.fog=new THREE.FogExp2(fogColor.getHex(),0.085);
+
+const camera=new THREE.PerspectiveCamera(74,W/H,0.05,160);
+const EYE=1.7, CROUCH=1.05;
+camera.position.set(0,EYE,27);
+scene.add(camera);
+
+const controls=new PointerLockControls(camera,document.body);
+
+/* faint ambient so silhouettes barely read against fog */
+scene.add(new THREE.HemisphereLight(0x223047,0x05060a,0.22));
+const amb=new THREE.AmbientLight(0x0a1020,0.25); scene.add(amb);
+/* moon-ish fill */
+const moon=new THREE.DirectionalLight(0x4a5a7a,0.18); moon.position.set(-20,40,-30); scene.add(moon);
+
+/* ---------------- flashlight ---------------- */
+const flash=new THREE.SpotLight(0xfff0d8, 0, 30, 0.5, 0.55, 1.6);
+flash.castShadow = QUALITY==="HIGH";
+if(flash.shadow){ flash.shadow.mapSize.set(1024,1024); flash.shadow.camera.near=0.4; flash.shadow.camera.far=32; flash.shadow.bias=-0.0008; }
+camera.add(flash);
+const flashTarget=new THREE.Object3D(); flashTarget.position.set(0,0,-1); camera.add(flashTarget); flash.target=flashTarget;
+let flashOn=true, flashBase=3.2;
+/* fake volumetric cone */
+const coneGeo=new THREE.ConeGeometry(2.6,11,24,1,true);
+coneGeo.translate(0,-5.5,0); coneGeo.rotateX(-Math.PI/2);
+const coneMat=new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.045,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide,fog:false});
+const cone=new THREE.Mesh(coneGeo,coneMat); cone.position.set(0,0,0.2); camera.add(cone);
+
+/* ---------------- world ---------------- */
+const BOUND={minx:-37,maxx:37,minz:-47,maxz:29};
+const houseRects=[]; // {minx,maxx,minz,maxz}
+const colliders=[];  // same, for player/entity
+function addRect(cx,cz,w,d){ const r={minx:cx-w/2,maxx:cx+w/2,minz:cz-d/2,maxz:cz+d/2}; houseRects.push(r); colliders.push(r); return r; }
+
+/* ground (wet asphalt) */
+const groundMat=new THREE.MeshStandardMaterial({color:0x0c0f15,roughness:0.45,metalness:0.35});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(180,180),groundMat);
+ground.rotation.x=-Math.PI/2; ground.position.y=0; ground.receiveShadow=true; scene.add(ground);
+/* shallow flood sheen — a second faint reflective-ish plane */
+const waterMat=new THREE.MeshStandardMaterial({color:0x0b1018,roughness:0.12,metalness:0.7,transparent:true,opacity:0.5});
+const water=new THREE.Mesh(new THREE.PlaneGeometry(180,180),waterMat);
+water.rotation.x=-Math.PI/2; water.position.y=0.02; scene.add(water);
+
+/* materials */
+const wallMat=new THREE.MeshStandardMaterial({color:0x14161d,roughness:0.9,metalness:0.0});
+const roofMat=new THREE.MeshStandardMaterial({color:0x0d0f15,roughness:1.0});
+const winLit=new THREE.MeshBasicMaterial({color:0xffcf7a,fog:true});
+const winDark=new THREE.MeshBasicMaterial({color:0x10131a,fog:true});
+
+function makeHouse(x,z,rot){
+  const g=new THREE.Group(); g.position.set(x,0,z); g.rotation.y=rot;
+  const w=8,d=7,h=5.4;
+  const body=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),wallMat); body.position.y=h/2; body.castShadow=true; body.receiveShadow=true; g.add(body);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(w*0.82,2.6,4),roofMat); roof.position.y=h+1.3; roof.rotation.y=Math.PI/4; roof.castShadow=true; g.add(roof);
+  // porch
+  const porch=new THREE.Mesh(new THREE.BoxGeometry(w*0.5,0.3,1.6),roofMat); porch.position.set(0,0.15,d/2+0.8); g.add(porch);
+  // door
+  const door=new THREE.Mesh(new THREE.BoxGeometry(1.1,2.2,0.1),new THREE.MeshStandardMaterial({color:0x070809,roughness:1})); door.position.set(0,1.1,d/2+0.06); g.add(door);
+  // windows (some lit)
+  for(const sx of [-2.3,2.3]){ const lit=Math.random()<0.32; const win=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.3), lit?winLit.clone():winDark); win.position.set(sx,2.4,d/2+0.06); g.add(win);
+    if(lit){ const pl=new THREE.PointLight(0xffcf7a,0.5,7,2); pl.position.set(sx,2.4,d/2+0.6); g.add(pl); } }
+  // porch light
+  if(Math.random()<0.6){ const pl=new THREE.PointLight(0xffd89a,0.7,6,2); pl.position.set(0,2.6,d/2+0.9); g.add(pl); const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.08),new THREE.MeshBasicMaterial({color:0xffe6b0})); bulb.position.copy(pl.position); g.add(bulb); }
+  scene.add(g);
+  addRect(x,z,w+0.4,d+0.4);
+}
+// two rows lining the street
+const rowZ=[22,12,2,-8,-18,-30,-40];
+for(const z of rowZ){ makeHouse(-13,z,Math.PI/2); makeHouse(13,z,-Math.PI/2); }
+
+/* perimeter fence (thin boxes) + gate gap */
+const fenceMat=new THREE.MeshStandardMaterial({color:0x10131a,roughness:1});
+const gateX=(Math.random()*18-9);
+function fenceRun(x1,z1,x2,z2,gapAt){ const len=Math.hypot(x2-x1,z2-z1); const seg=2.4; const n=Math.floor(len/seg); for(let i=0;i<n;i++){ const t=(i+0.5)/n; const px=x1+(x2-x1)*t, pz=z1+(z2-z1)*t; if(gapAt!=null && Math.abs(px-gapAt)<3.5 && Math.abs(pz-(-47))<2) continue; const post=new THREE.Mesh(new THREE.BoxGeometry(0.18,2.2,seg*0.96),fenceMat); post.position.set(px,1.1,pz); post.lookAt(x2,1.1,z2); post.castShadow=true; scene.add(post); } }
+fenceRun(BOUND.minx,BOUND.minz,BOUND.maxx,BOUND.minz,gateX); // far (gate)
+fenceRun(BOUND.minx,BOUND.maxz,BOUND.maxx,BOUND.maxz,null);
+fenceRun(BOUND.minx,BOUND.minz,BOUND.minx,BOUND.maxz,null);
+fenceRun(BOUND.maxx,BOUND.minz,BOUND.maxx,BOUND.maxz,null);
+/* gate marker (unpowered) */
+const gateGroup=new THREE.Group(); gateGroup.position.set(gateX,0,-47); scene.add(gateGroup);
+const gatePost1=new THREE.Mesh(new THREE.BoxGeometry(0.3,3,0.3),fenceMat); gatePost1.position.set(-2,1.5,0); gateGroup.add(gatePost1);
+const gatePost2=gatePost1.clone(); gatePost2.position.x=2; gateGroup.add(gatePost2);
+const gateLampMat=new THREE.MeshBasicMaterial({color:0x331010}); const gateLamp=new THREE.Mesh(new THREE.SphereGeometry(0.18),gateLampMat); gateLamp.position.set(0,3,0); gateGroup.add(gateLamp);
+const gateLight=new THREE.PointLight(0xff3030,0,8,2); gateLight.position.set(0,3,0); gateGroup.add(gateLight);
+
+/* landmarks (tall, faintly self-lit, visible through fog) */
+function watertower(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
+  for(const a of [0,Math.PI/2,Math.PI,Math.PI*1.5]){ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,12),fenceMat); leg.position.set(Math.cos(a)*1.6,6,Math.sin(a)*1.6); g.add(leg); }
+  const tank=new THREE.Mesh(new THREE.CylinderGeometry(3,3,4,12),new THREE.MeshStandardMaterial({color:0x161a22,roughness:1})); tank.position.y=14; tank.castShadow=true; g.add(tank);
+  const top=new THREE.Mesh(new THREE.ConeGeometry(3.1,2,12),roofMat); top.position.y=17; g.add(top);
+  const beacon=new THREE.Mesh(new THREE.SphereGeometry(0.16),new THREE.MeshBasicMaterial({color:0xff5544})); beacon.position.y=18.2; g.add(beacon);
+  scene.add(g); addRect(x,z,3,3); }
+function spire(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(5,8,5),wallMat); body.position.y=4; body.castShadow=true; g.add(body);
+  const tower=new THREE.Mesh(new THREE.BoxGeometry(2.4,7,2.4),wallMat); tower.position.y=9; g.add(tower);
+  const sp=new THREE.Mesh(new THREE.ConeGeometry(1.7,6,4),roofMat); sp.position.y=15; sp.rotation.y=Math.PI/4; g.add(sp);
+  const cross=new THREE.Mesh(new THREE.BoxGeometry(0.15,1.2,0.15),new THREE.MeshBasicMaterial({color:0x6a7080})); cross.position.y=18.4; g.add(cross);
+  scene.add(g); addRect(x,z,5,5); }
+watertower(-32,-43); spire(32,-43);
+/* working streetlight at cul-de-sac head */
+function streetlamp(x,z,on){ const g=new THREE.Group(); g.position.set(x,0,z); const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.14,6),fenceMat); pole.position.y=3; g.add(pole); const head=new THREE.Mesh(new THREE.BoxGeometry(0.8,0.3,0.8),fenceMat); head.position.y=6; g.add(head); if(on){ const bulb=new THREE.Mesh(new THREE.SphereGeometry(0.16),new THREE.MeshBasicMaterial({color:0xfff0c0})); bulb.position.y=5.85; g.add(bulb); const pl=new THREE.PointLight(0xffe6b0,1.1,16,2); pl.position.set(0,5.8,0); g.add(pl); } scene.add(g); }
+streetlamp(0,27,true); streetlamp(0,-44,false);
+
+/* your car at the dead end */
+function car(x,z){ const g=new THREE.Group(); g.position.set(x,0,z);
+  const b=new THREE.Mesh(new THREE.BoxGeometry(2,0.9,4.4),new THREE.MeshStandardMaterial({color:0x191b22,roughness:0.6,metalness:0.3})); b.position.y=0.7; b.castShadow=true; g.add(b);
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.8,2.2),new THREE.MeshStandardMaterial({color:0x0d0f14,roughness:0.3,metalness:0.4})); cab.position.set(0,1.45,-0.2); g.add(cab);
+  scene.add(g); addRect(x,z,2.2,4.6); }
+car(4.5,27);
+/* a few parked cars + a swing for liminal dread */
+car(-5,-2); car(6,-22);
+
+/* ---------------- fuses ---------------- */
+const FUSE_SPOTS=[ {x:-30,z:-40}, {x:30,z:-40}, {x:-2,z:-15} ];
+const fuses=[];
+for(const s of FUSE_SPOTS){ const g=new THREE.Group(); g.position.set(s.x,1.0,s.z);
+  const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.34,0),new THREE.MeshBasicMaterial({color:0xffd070})); g.add(m);
+  const pl=new THREE.PointLight(0xffc060,0.9,5,2); g.add(pl);
+  scene.add(g); fuses.push({grp:g,got:false,mesh:m}); }
+let fuseCount=0, gatePowered=false;
+
+/* ---------------- The Neighbor ---------------- */
+const NEI=new THREE.Group();
+const darkMat=new THREE.MeshBasicMaterial({color:0x070709,fog:true});
+const torso=new THREE.Mesh(new THREE.CapsuleGeometry(0.26,1.2,4,8),darkMat); torso.position.y=1.5; NEI.add(torso);
+const head=new THREE.Mesh(new THREE.SphereGeometry(0.22,12,12),darkMat); head.scale.set(0.85,1.25,0.85); head.position.y=2.45; NEI.add(head);
+for(const sx of [-0.32,0.32]){ const arm=new THREE.Mesh(new THREE.CapsuleGeometry(0.08,1.25,3,6),darkMat); arm.position.set(sx,1.35,0); NEI.add(arm); }
+for(const sx of [-0.14,0.14]){ const leg=new THREE.Mesh(new THREE.CapsuleGeometry(0.1,1.4,3,6),darkMat); leg.position.set(sx,0.75,0); NEI.add(leg); }
+const eyeMat=new THREE.MeshBasicMaterial({color:0xff5a5a,fog:false});
+for(const sx of [-0.08,0.08]){ const eye=new THREE.Mesh(new THREE.SphereGeometry(0.035,6,6),eyeMat); eye.position.set(sx,2.5,0.18); NEI.add(eye); }
+NEI.rotation.x=0.04; NEI.position.set(0,0,-44); NEI.visible=true; scene.add(NEI);
+
+/* ---------------- audio ---------------- */
+let AC=null,muted=false,master=null,listenerOK=false;
+let windGain=null,heart=null,neiPan=null,neiGain=null,neiOsc=null;
+function initAudio(){ if(AC)return; try{ AC=new (window.AudioContext||window.webkitAudioContext)(); master=AC.createGain(); master.gain.value=0.9;
+  const lim=AC.createDynamicsCompressor(); lim.threshold.value=-6; lim.ratio.value=12; master.connect(lim); lim.connect(AC.destination);
+  // wind bed
+  const wn=AC.createBufferSource(); const buf=AC.createBuffer(1,AC.sampleRate*4,AC.sampleRate); const dd=buf.getChannelData(0); for(let i=0;i<dd.length;i++)dd[i]=(Math.random()*2-1)*0.4; wn.buffer=buf; wn.loop=true; const wf=AC.createBiquadFilter(); wf.type="lowpass"; wf.frequency.value=320; windGain=AC.createGain(); windGain.gain.value=0.12; wn.connect(wf); wf.connect(windGain); windGain.connect(master); wn.start();
+  // entity presence drone through panner
+  neiPan=AC.createPanner(); neiPan.panningModel="HRTF"; neiPan.distanceModel="inverse"; neiPan.refDistance=2; neiPan.maxDistance=40; neiPan.rolloffFactor=1.2;
+  neiOsc=AC.createOscillator(); neiOsc.type="sawtooth"; neiOsc.frequency.value=58; const nf=AC.createBiquadFilter(); nf.type="lowpass"; nf.frequency.value=200; neiGain=AC.createGain(); neiGain.gain.value=0.0; neiOsc.connect(nf); nf.connect(neiGain); neiGain.connect(neiPan); neiPan.connect(master); neiOsc.start();
+  listenerOK=!!AC.listener; }catch(e){ console.warn(e); } }
+function tone(f,d,t,g,w){ if(!AC||muted)return; const o=AC.createOscillator(),v=AC.createGain(); o.type=w||"sine"; o.frequency.setValueAtTime(f,AC.currentTime); if(t)o.frequency.exponentialRampToValueAtTime(t,AC.currentTime+d); v.gain.setValueAtTime(g||0.1,AC.currentTime); v.gain.exponentialRampToValueAtTime(0.0001,AC.currentTime+d); o.connect(v); v.connect(master); o.start(); o.stop(AC.currentTime+d+0.02); }
+function noiseBurst(d,g,freq){ if(!AC||muted)return; const b=AC.createBuffer(1,(AC.sampleRate*d)|0,AC.sampleRate),dd=b.getChannelData(0); for(let i=0;i<dd.length;i++)dd[i]=(Math.random()*2-1)*Math.pow(1-i/dd.length,1.5); const s=AC.createBufferSource(); s.buffer=b; const f=AC.createBiquadFilter(); f.type="bandpass"; f.frequency.value=freq||900; const v=AC.createGain(); v.gain.value=g||0.1; s.connect(f); f.connect(v); v.connect(master); s.start(); }
+const sStinger=()=>{ tone(120,0.5,38,0.22,"sawtooth"); noiseBurst(0.4,0.18,600); if(navigator.vibrate)navigator.vibrate(120); };
+const sFuse=()=>{ tone(523,0.1,0,0.12,"triangle"); setTimeout(()=>tone(784,0.16,0,0.1,"triangle"),90); };
+const sResolve=()=>{ tone(330,0.5,180,0.1,"sine"); };
+const sGate=()=>{ tone(180,0.3,90,0.14,"square"); setTimeout(()=>tone(90,0.6,40,0.1,"sawtooth"),120); };
+let hbT=0; function heartbeat(dt,tension){ if(!AC||muted)return; if(tension<0.25){hbT=0;return;} hbT-=dt; if(hbT<=0){ tone(46,0.12,0,0.06+tension*0.1,"sine"); setTimeout(()=>tone(40,0.14,0,0.05+tension*0.08,"sine"),120); hbT=Math.max(0.34,1.0-tension*0.6); } }
+let stepT=0; function footstep(dt,moving,sprint){ if(!AC||muted||!moving){return;} stepT-=dt; if(stepT<=0){ noiseBurst(0.12,sprint?0.09:0.045, 500+Math.random()*200); stepT=sprint?0.28:0.46; } }
+
+/* ---------------- input ---------------- */
+const keys={};
+addEventListener("keydown",e=>{ keys[e.code]=true; if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code))e.preventDefault();
+  if(e.code==="KeyF"){ flashOn=!flashOn; } });
+addEventListener("keyup",e=>{ keys[e.code]=false; });
+controls.addEventListener("lock",()=>{ state==="pause"&&(state="play"); document.getElementById("pause").classList.add("hide"); if(state==="menu")state="play"; });
+controls.addEventListener("unlock",()=>{ if(state==="play"){ state="pause"; document.getElementById("pause").classList.remove("hide"); } });
+
+/* ---------------- game state ---------------- */
+let state="menu"; // menu, play, pause, win
+let stamina=1, dread=0, startTime=0, elapsed=0;
+const player={ vel:new THREE.Vector3(), noise:0, crouch:false, sprinting:false, moving:false };
+// entity AI
+const ai={ mode:"backstage", t:0, target:new THREE.Vector3(0,0,-44), last:new THREE.Vector3(), tension:0, sinceEncounter:0, escapeT:0, contactStreak:0, wanderT:0 };
+let shake=0, yawSpinApplied=false, contactT=0, calmT=0;
+
+/* helpers */
+const up=new THREE.Vector3(0,1,0), fwd=new THREE.Vector3(), right=new THREE.Vector3(), tmp=new THREE.Vector3();
+function collide(pos,rad){ // push pos out of colliders + bounds (xz)
+  for(const r of colliders){ if(pos.x>r.minx-rad&&pos.x<r.maxx+rad&&pos.z>r.minz-rad&&pos.z<r.maxz+rad){
+    const dl=Math.abs(pos.x-(r.minx-rad)),dr=Math.abs((r.maxx+rad)-pos.x),dt2=Math.abs(pos.z-(r.minz-rad)),db=Math.abs((r.maxz+rad)-pos.z);
+    const m=Math.min(dl,dr,dt2,db); if(m===dl)pos.x=r.minx-rad; else if(m===dr)pos.x=r.maxx+rad; else if(m===dt2)pos.z=r.minz-rad; else pos.z=r.maxz+rad; } }
+  pos.x=Math.max(BOUND.minx+0.6,Math.min(BOUND.maxx-0.6,pos.x));
+  let zmin=BOUND.minz+0.6; // allow leaving through gate when powered
+  if(gatePowered && Math.abs(pos.x-gateX)<2.6 && pos.z<BOUND.minz+3) zmin=BOUND.minz-8;
+  pos.z=Math.max(zmin,Math.min(BOUND.maxz-0.6,pos.z));
+}
+function segBlocked(ax,az,bx,bz){ const n=10; for(let i=1;i<n;i++){ const t=i/n, px=ax+(bx-ax)*t, pz=az+(bz-az)*t; for(const r of houseRects){ if(px>r.minx&&px<r.maxx&&pz>r.minz&&pz<r.maxz)return true; } } return false; }
+
+function setObj(t){ document.getElementById("obj").textContent=t; }
+function toast(t,sub){ const e=document.getElementById("toast"),h=document.getElementById("hint"); e.textContent=t; e.classList.add("show"); if(sub){h.textContent=sub;h.classList.add("show");} clearTimeout(toast._t); toast._t=setTimeout(()=>{e.classList.remove("show");h.classList.remove("show");}, 2600); }
+
+/* ---------------- AI update ---------------- */
+function updateAI(dt){
+  const p=camera.position; const d=NEI.position.distanceTo(p);
+  ai.tension=Math.max(0,Math.min(1,ai.tension));
+  ai.sinceEncounter+=dt;
+  // honest sensing
+  const noiseR = player.sprinting?20: player.moving?(player.crouch?6:11):2;
+  const sightR = (flashOn?16:9);
+  const hasLOS = !segBlocked(NEI.position.x,NEI.position.z,p.x,p.z);
+  const heard = d<noiseR;
+  const seen = hasLOS && d<sightR;
+  const senses = heard||seen;
+  if(senses){ ai.last.copy(p); }
+
+  // director: ramp tension; force stalk when calm too long
+  let tgtTension = 0.15 + fuseCount*0.18;
+  if(ai.mode==="hunt"||ai.mode==="contact") tgtTension=Math.max(tgtTension, 0.6+ai.contactStreak*0.12);
+  if(ai.mode==="calm") tgtTension*=0.3;
+  ai.tension += (tgtTension-ai.tension)*Math.min(1,dt*0.4);
+
+  switch(ai.mode){
+    case "backstage": { NEI.visible=false; ai.t-=dt; const ready = ai.sinceEncounter> (16 - fuseCount*3) ; if(ai.t<=0 && ready){ // spawn a stalk: place her mid-distance toward player from a flank
+        const ang=Math.random()*Math.PI*2; const dist=18; let sx=p.x+Math.cos(ang)*dist, sz=p.z+Math.sin(ang)*dist; sx=Math.max(BOUND.minx+1,Math.min(BOUND.maxx-1,sx)); sz=Math.max(BOUND.minz+1,Math.min(BOUND.maxz-1,sz)); NEI.position.set(sx,0,sz); NEI.visible=true; ai.mode="investigate"; ai.last.copy(p); ai.t=0; tone(70,1.4,46,0.16,"sawtooth"); toast("","a door clicks shut somewhere"); } break; }
+    case "wander": { NEI.visible=true; ai.wanderT-=dt; if(ai.wanderT<=0){ ai.target.set(p.x+(Math.random()*30-15),0,p.z+(Math.random()*30-15)); ai.wanderT=3+Math.random()*3; } moveNEI(ai.target,1.3,dt); if(senses){ ai.mode="hunt"; tone(90,0.8,200,0.12,"sawtooth"); } ai.t-=dt; if(ai.t<=0){ ai.mode="backstage"; ai.t=6+Math.random()*6; ai.sinceEncounter=0; } break; }
+    case "investigate": { NEI.visible=true; moveNEI(ai.last,1.7,dt); if(senses){ ai.mode="hunt"; } if(NEI.position.distanceTo(ai.last)<2){ ai.mode="wander"; ai.wanderT=0; ai.t=5; } break; }
+    case "hunt": {
+      NEI.visible=true; const aim = senses? p : ai.last; moveNEI(aim, 2.55+ai.contactStreak*0.25, dt);
+      // danger fog tint
+      if(d<contactDist){ enterContact(); }
+      if(!senses){ ai._lost=(ai._lost||0)+dt; if(ai._lost>3.5){ ai.mode="investigate"; ai._lost=0; } } else ai._lost=0;
+      break; }
+    case "contact": { ai.escapeT-=dt; // she recoils slightly
+      moveNEI(tmp.set(NEI.position.x*2-p.x, 0, NEI.position.z*2-p.z), 0.8, dt);
+      if(contactT<=0){ ai.mode="escape"; ai.escapeT=9; } break; }
+    case "escape": { ai.escapeT-=dt; const broke = (!hasLOS) && d>10; if(broke){ ai.mode="calm"; calmT=9; sResolve(); toast("she lost you","breathe — keep moving"); ai.contactStreak=Math.max(0,ai.contactStreak-1); } else { moveNEI(p, 2.2, dt); if(d<contactDist) enterContact(); if(ai.escapeT<=0){ /* still close: re-grab */ if(d<6){ enterContact(); } else { ai.mode="calm"; calmT=7; } } } break; }
+    case "calm": { NEI.visible=false; calmT-=dt; if(calmT<=0){ ai.mode="backstage"; ai.t=5+Math.random()*5; ai.sinceEncounter=0; } break; }
+  }
+  // fog/tint by tension
+  const danger=(ai.mode==="hunt"||ai.mode==="contact"||ai.mode==="escape")?1:0;
+  const targetDensity = 0.085 + danger*0.03 - (ai.mode==="calm"?0.02:0);
+  scene.fog.density += (targetDensity-scene.fog.density)*Math.min(1,dt*1.5);
+  const tcol = danger? 0x0d0a12 : 0x0a0c12;
+  fogColor.lerp(new THREE.Color(tcol), Math.min(1,dt*1.5)); scene.background=fogColor; renderer.setClearColor(fogColor,1);
+  // audio presence
+  if(neiGain){ const want = NEI.visible? (danger?0.16:0.05)*(1- Math.min(1,d/30)) : 0; neiGain.gain.value += (want-neiGain.gain.value)*Math.min(1,dt*3); }
+  if(neiPan && AC){ try{ if(neiPan.positionX){neiPan.positionX.value=NEI.position.x;neiPan.positionY.value=1.5;neiPan.positionZ.value=NEI.position.z;} else neiPan.setPosition(NEI.position.x,1.5,NEI.position.z);}catch(e){} }
+}
+const contactDist=1.5;
+function moveNEI(targetVec,speed,dt){ tmp.set(targetVec.x-NEI.position.x,0,targetVec.z-NEI.position.z); const len=tmp.length(); if(len<0.01)return; tmp.multiplyScalar(1/len); const nx=NEI.position.x+tmp.x*speed*dt, nz=NEI.position.z+tmp.z*speed*dt; const np=new THREE.Vector3(nx,0,nz); collide(np,0.5); NEI.position.x=np.x; NEI.position.z=np.z; NEI.rotation.y=Math.atan2(tmp.x,tmp.z);
+  // bob
+  NEI.children.forEach((c,i)=>{}); const bob=Math.sin(performance.now()*0.006*speed)*0.04; NEI.position.y=bob*0+0; }
+function enterContact(){ if(ai.mode==="contact")return; ai.mode="contact"; ai.contactStreak++; contactT=2.4+Math.min(1.2,ai.contactStreak*0.3); shake=1; sStinger();
+  document.getElementById("flash").style.opacity="0.9"; setTimeout(()=>document.getElementById("flash").style.opacity="0",140);
+  // yaw spin — lose your heading
+  const ang=(Math.random()*Math.PI/3+Math.PI/6)*(Math.random()<0.5?-1:1); const q=new THREE.Quaternion().setFromAxisAngle(up,ang); camera.quaternion.premultiply(q);
+  toast("SHE TOUCHED YOU","RUN — break her sight"); ai.sinceEncounter=0; }
+
+/* ---------------- main loop ---------------- */
+const clock=new THREE.Clock();
+function frame(){ const dt=Math.min(0.05,clock.getDelta());
+  if(state==="play"){
+    // movement
+    camera.getWorldDirection(fwd); fwd.y=0; fwd.normalize(); right.crossVectors(fwd,up).normalize();
+    player.crouch=!!keys["KeyC"]||!!keys["ControlLeft"];
+    let mx=0,mz=0; if(keys["KeyW"]||keys["ArrowUp"])mz+=1; if(keys["KeyS"]||keys["ArrowDown"])mz-=1; if(keys["KeyD"]||keys["ArrowRight"])mx+=1; if(keys["KeyA"]||keys["ArrowLeft"])mx-=1;
+    player.moving=(mx||mz)&&contactT<=0;
+    const wantSprint=(keys["ShiftLeft"]||keys["ShiftRight"])&&stamina>0.05&&!player.crouch&&mz>0;
+    player.sprinting=wantSprint&&player.moving;
+    let spd=player.crouch?1.5:(player.sprinting?5.2:2.7); if(contactT>0)spd*=0.45;
+    if(player.sprinting){ stamina=Math.max(0,stamina-dt/4.5);} else { stamina=Math.min(1,stamina+dt/7); }
+    const move=tmp.set(0,0,0); move.addScaledVector(fwd,mz).addScaledVector(right,mx); if(move.lengthSq()>0)move.normalize();
+    const np=camera.position.clone(); np.addScaledVector(move, spd*dt); collide(np,0.5); camera.position.x=np.x; camera.position.z=np.z;
+    // crouch height + head bob
+    const targetY=(player.crouch?CROUCH:EYE); camera.position.y += (targetY-camera.position.y)*Math.min(1,dt*8);
+    if(player.moving){ camera.position.y += Math.sin(performance.now()*0.012*spd)*0.012; }
+    // win check at gate
+    if(gatePowered && camera.position.z<BOUND.minz+1.5 && Math.abs(camera.position.x-gateX)<2.6){ winGame(); }
+    // fuses
+    for(const f of fuses){ if(!f.got && camera.position.distanceTo(f.grp.position)<1.6){ f.got=true; f.grp.visible=false; fuseCount++; sFuse(); ai.tension=Math.min(1,ai.tension+0.25); document.getElementById("fuses").textContent="FUSES  —  "+fuseCount+" / 3";
+      if(fuseCount>=3){ powerGate(); } else { toast("fuse recovered", (3-fuseCount)+" more · she felt that"); } } else if(!f.got){ f.mesh.rotation.y+=dt*1.5; f.mesh.position.y=Math.sin(performance.now()*0.003)*0.1; } }
+    // flashlight
+    const tgtI = flashOn? flashBase : 0; flash.intensity += (tgtI-flash.intensity)*Math.min(1,dt*10);
+    coneMat.opacity = flashOn? 0.045 + (ai.tension*0.02) : 0;
+    if(flashOn){ const flick = 1 - (Math.random()<(0.02+ai.tension*0.08)?Math.random()*0.5:0); flash.intensity*=flick; }
+    // timers
+    if(contactT>0)contactT-=dt;
+    if(shake>0)shake=Math.max(0,shake-dt*1.6);
+    updateAI(dt);
+    elapsed=(performance.now()-startTime)/1000;
+    // audio
+    dread = Math.max(ai.tension, ai.mode==="hunt"?0.8:0, contactT>0?1:0);
+    heartbeat(dt,dread); footstep(dt,player.moving,player.sprinting);
+    if(windGain)windGain.gain.value=0.10+dread*0.06;
+    // listener
+    if(AC&&AC.listener){ try{ const l=AC.listener; if(l.positionX){ l.positionX.value=camera.position.x; l.positionZ.value=camera.position.z; l.positionY.value=camera.position.y; camera.getWorldDirection(fwd); l.forwardX.value=fwd.x; l.forwardY.value=fwd.y; l.forwardZ.value=fwd.z; l.upX.value=0;l.upY.value=1;l.upZ.value=0; } else { l.setPosition(camera.position.x,camera.position.y,camera.position.z); camera.getWorldDirection(fwd); l.setOrientation(fwd.x,fwd.y,fwd.z,0,1,0);} }catch(e){} }
+    // HUD diegetic
+    const st=document.getElementById("stam"); st.style.opacity=(stamina<0.999)?"1":"0"; document.getElementById("stambar").style.transform="scaleX("+stamina+")";
+    // post: CSS filter driven by state
+    const blur=(contactT>0? 4*contactT/2.4 : 0)+ (shake>0?shake*1.5:0);
+    const bright=1 - dread*0.12 + (flashOn?0.04:0);
+    const sat=0.82 - dread*0.2;
+    canvas.style.filter="saturate("+sat.toFixed(2)+") contrast(1.07) brightness("+bright.toFixed(2)+")"+(blur>0.05?" blur("+blur.toFixed(1)+"px)":"");
+    document.getElementById("dark").style.opacity = (stamina<0.2?0.25*(1-stamina/0.2):0).toFixed(2);
+  }
+  // camera shake offset
+  if(shake>0){ const s=shake*0.16; camera.position.x+=(Math.random()-0.5)*s; camera.position.y+=(Math.random()-0.5)*s; }
+  renderer.render(scene,camera);
+}
+renderer.setAnimationLoop(frame);
+
+function powerGate(){ gatePowered=true; gateLamp.material.color.set(0x30ff60); gateLight.color.set(0x40ff70); gateLight.intensity=2.2; sGate(); setObj("the gate is live — find it in the fog"); toast("THE GATE IS LIVE","follow the fence to the red beacon"); gateLamp.material.color.set(0x40ff70); }
+function winGame(){ if(state==="win")return; state="win"; try{controls.unlock();}catch(e){}
+  const best=Math.min(+(localStorage.getItem("nh_best")||9999), elapsed); localStorage.setItem("nh_best",best);
+  const runs=(+(localStorage.getItem("nh_runs")||0))+1; localStorage.setItem("nh_runs",runs);
+  document.getElementById("wtime").textContent=fmt(elapsed); document.getElementById("wbest").textContent=fmt(best); document.getElementById("wruns").textContent=runs;
+  document.getElementById("hud").classList.remove("on"); document.getElementById("win").classList.remove("hide"); document.getElementById("pause").classList.add("hide"); }
+function fmt(s){ s=Math.floor(s); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+/* ---------------- shell ---------------- */
+document.getElementById("loading").style.display="none";
+const qlabel=document.getElementById("qlabel"); qlabel.textContent=QUALITY;
+document.getElementById("qtoggle").onclick=()=>{ QUALITY=QUALITY==="HIGH"?"LOW":"HIGH"; localStorage.setItem("nh_q",QUALITY); qlabel.textContent=QUALITY; location.reload(); };
+function begin(){ initAudio(); if(AC&&AC.state==="suspended")AC.resume(); startTime=performance.now(); state="play"; ai.sinceEncounter=0; ai.mode="backstage"; ai.t=8;
+  document.getElementById("title").classList.add("hide"); document.getElementById("win").classList.add("hide"); document.getElementById("hud").classList.add("on");
+  try{controls.lock();}catch(e){} }
+document.getElementById("enter").onclick=begin;
+document.getElementById("resume").onclick=()=>{ try{controls.lock();}catch(e){} };
+document.getElementById("again").onclick=()=>{ location.reload(); };
+document.getElementById("wshare").onclick=()=>{ const txt="NOBODY HOME 🌫️ I found the 3 fuses and got out of the street in "+fmt(elapsed)+".\nthe Neighbor nearly had me. your turn — but bring headphones."; if(navigator.clipboard)navigator.clipboard.writeText(txt); document.getElementById("copied").textContent="copied ✓"; };
+addEventListener("resize",()=>{ W=innerWidth;H=innerHeight; camera.aspect=W/H; camera.updateProjectionMatrix(); renderer.setSize(W,H); });
+setObj("find a way out — 3 fuses power the gate");
+
+}catch(e){ errEl.style.display="block"; errEl.textContent="INIT ERROR: "+(e&&e.message?e.message:e)+"\n"+(e&&e.stack?e.stack:""); }
+</script>
+</body>
+</html>
