@@ -125,6 +125,8 @@
 <script type="module">
 import * as THREE from 'three';
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 const errEl=document.getElementById("err");
 window.addEventListener("error",e=>{ errEl.style.display="block"; errEl.textContent+="\n"+(e.message||e.error)+" @ "+(e.filename||"")+":"+(e.lineno||""); });
 try{
@@ -160,6 +162,63 @@ scene.add(new THREE.HemisphereLight(0x223047,0x05060a,0.22));
 const amb=new THREE.AmbientLight(0x0a1020,0.25); scene.add(amb);
 /* moon-ish fill */
 const moon=new THREE.DirectionalLight(0x4a5a7a,0.18); moon.position.set(-20,40,-30); scene.add(moon);
+
+/* ---------------- asset loading ---------------- */
+const LOWQ = QUALITY==="LOW";
+const texLoader = new THREE.TextureLoader();
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+function tex(url, srgb){
+  return new Promise(res=>{
+    texLoader.load(url, t=>{
+      t.wrapS=t.wrapT=THREE.RepeatWrapping; t.anisotropy=maxAniso;
+      if(srgb) t.colorSpace=THREE.SRGBColorSpace;
+      res(t);
+    }, undefined, ()=>res(null));
+  });
+}
+async function loadPBR(name, {repeat=[1,1]}={}, fallback){
+  const base=`assets/textures/${name}`;
+  const [c,n,r,a] = await Promise.all([
+    tex(`${base}/color.jpg`, true), tex(`${base}/normal.jpg`,false),
+    tex(`${base}/roughness.jpg`,false), tex(`${base}/ao.jpg`,false)
+  ]);
+  if(!c){ console.warn("PBR fallback:", name); return fallback; }
+  for(const t of [c,n,r,a]) if(t) t.repeat.set(repeat[0],repeat[1]);
+  return new THREE.MeshStandardMaterial({
+    map:c, normalMap:n||null, roughnessMap:r||null, aoMap:a||null,
+    color:0x8a8a8a, metalness:0.0, roughness:1.0, envMapIntensity:0.3
+  });
+}
+async function loadGLTF(url){
+  try{ const g=await new GLTFLoader().loadAsync(url); return g.scene; }
+  catch(e){ console.warn("GLTF fallback:", url, e); return null; }
+}
+async function loadEnv(url){
+  if(LOWQ) return;
+  try{
+    const hdr=await new RGBELoader().loadAsync(url);
+    const pmrem=new THREE.PMREMGenerator(renderer);
+    scene.environment=pmrem.fromEquirectangular(hdr).texture;
+    hdr.dispose(); pmrem.dispose();
+  }catch(e){ console.warn("env fallback", e); }
+}
+const ASSETS={};
+async function loadAllAssets(){
+  const loadingEl=document.getElementById("loading");
+  loadingEl.textContent="loading textures…";
+  ASSETS.asphalt  = await loadPBR("asphalt",  {repeat:[40,40]}, null);
+  ASSETS.ground   = await loadPBR("ground",   {repeat:[30,30]}, null);
+  ASSETS.siding   = await loadPBR("siding",   {repeat:[2,2]},   null);
+  ASSETS.brick    = await loadPBR("brick",    {repeat:[2,2]},   null);
+  ASSETS.roof     = await loadPBR("roof",     {repeat:[3,2]},   null);
+  ASSETS.wood     = await loadPBR("wood",     {repeat:[1,4]},   null);
+  ASSETS.concrete = await loadPBR("concrete", {repeat:[2,2]},   null);
+  loadingEl.textContent="loading lighting…";
+  await loadEnv("assets/hdri/night.hdr");
+  loadingEl.textContent="loading props…";
+  ASSETS.car = await loadGLTF("assets/models/car.glb");
+}
+await loadAllAssets();
 
 /* ---------------- flashlight ---------------- */
 const flash=new THREE.SpotLight(0xfff0d8, 0, 30, 0.5, 0.55, 1.6);
